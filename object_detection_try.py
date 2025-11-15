@@ -272,7 +272,13 @@ if uploaded_file is not None:
         
         if len(detections) > 0:
             detection_data = []
-            for i, (bbox, confidence, class_id, _) in enumerate(detections):
+            
+            # FIXED: Correct way to iterate through supervision Detections
+            for i in range(len(detections)):
+                bbox = detections.xyxy[i]
+                confidence = detections.confidence[i]
+                class_id = detections.class_id[i]
+                
                 detection_data.append({
                     "#": i + 1,
                     "Class": model.names[class_id],
@@ -323,4 +329,5 @@ st.markdown(
     </div>
     """,
     unsafe_allow_html=True
+
 )

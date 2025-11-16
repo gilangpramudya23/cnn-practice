@@ -60,61 +60,6 @@ def count_safety_equipment(detections, class_names):
     }
 
 # ===========================
-# FUNCTION: ANNOTATE IMAGE WITH OVERLAY
-# ===========================
-def annotate_image_with_summary(image, detections, counts):
-    """Add bounding boxes, labels, and summary overlay"""
-    
-    # Get class names
-    class_names = model.names
-    
-    # Annotate with boxes and labels
-    box_annotator = sv.BoxAnnotator(thickness=2)
-    label_annotator = sv.LabelAnnotator(text_scale=0.5, text_thickness=2)
-    
-    annotated_image = image.copy()
-    annotated_image = box_annotator.annotate(scene=annotated_image, detections=detections)
-    
-    # Create labels with class names
-    labels = [f"{class_names[class_id]}" for class_id in detections.class_id]
-    annotated_image = label_annotator.annotate(scene=annotated_image, detections=detections, labels=labels)
-    
-    # Add summary overlay
-    overlay = annotated_image.copy()
-    h, w = overlay.shape[:2]
-    
-    # Background for text
-    cv2.rectangle(overlay, (10, 10), (400, 220), (0, 0, 0), -1)
-    annotated_image = cv2.addWeighted(annotated_image, 0.7, overlay, 0.3, 0)
-    
-    # Add text
-    font = cv2.FONT_HERSHEY_SIMPLEX
-    y_offset = 40
-    
-    cv2.putText(annotated_image, "DETECTION SUMMARY", (20, y_offset), font, 0.7, (255, 255, 255), 2)
-    y_offset += 35
-    cv2.putText(annotated_image, f"People: {counts['person']}", (20, y_offset), font, 0.6, (255, 255, 255), 2)
-    y_offset += 30
-    
-    helmet_color = (0, 255, 0) if counts['no_helmet'] == 0 else (0, 165, 255)
-    cv2.putText(annotated_image, f"Helmet: {counts['helmet']} | No: {counts['no_helmet']}", 
-                (20, y_offset), font, 0.5, helmet_color, 2)
-    y_offset += 30
-    
-    vest_color = (0, 255, 0) if counts['no_vest'] == 0 else (0, 165, 255)
-    cv2.putText(annotated_image, f"Vest: {counts['vest']} | No: {counts['no_vest']}", 
-                (20, y_offset), font, 0.5, vest_color, 2)
-    y_offset += 35
-    
-    # Compliance status
-    if counts['no_helmet'] == 0 and counts['no_vest'] == 0 and counts['person'] > 0:
-        cv2.putText(annotated_image, "STATUS: COMPLIANT", (20, y_offset), font, 0.6, (0, 255, 0), 2)
-    else:
-        cv2.putText(annotated_image, "STATUS: NON-COMPLIANT", (20, y_offset), font, 0.6, (0, 0, 255), 2)
-    
-    return annotated_image
-
-# ===========================
 # FUNCTION: RUN DETECTION
 # ===========================
 def detect_objects(image, confidence_threshold=0.5):
@@ -145,16 +90,6 @@ def detect_objects(image, confidence_threshold=0.5):
 # ===========================
 # SIDEBAR: SETTINGS
 # ===========================
-st.sidebar.header("⚙️ Settings")
-confidence_threshold = st.sidebar.slider(
-    "Confidence Threshold",
-    min_value=0.0,
-    max_value=1.0,
-    value=0.5,
-    step=0.05,
-    help="Minimum confidence for detections"
-)
-
 st.sidebar.markdown("---")
 st.sidebar.markdown("### 📊 Model Info")
 st.sidebar.info(
@@ -331,3 +266,4 @@ st.markdown(
     unsafe_allow_html=True
 
 )
+

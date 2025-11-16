@@ -25,7 +25,7 @@ st.markdown("Upload an image to detect safety equipment violations")
 def load_yolo_model():
     """Load YOLO model (runs only once)"""
     with st.spinner('🔄 Loading YOLO model... Please wait'):
-        model = YOLO('best.pt')  # Your model file
+        model = YOLO('best.pt')
     st.success('✅ Model loaded successfully!')
     return model
 
@@ -60,17 +60,39 @@ def count_safety_equipment(detections, class_names):
     }
 
 # ===========================
-# FUNCTION: RUN DETECTION
+# FUNCTION: ANNOTATE IMAGE (NO SUMMARY OVERLAY)
 # ===========================
-def detect_objects(image, confidence_threshold=0.5):
+def annotate_image(image, detections):
+    """Add only bounding boxes and labels (no summary overlay)"""
+    
+    # Get class names
+    class_names = model.names
+    
+    # Annotate with boxes and labels
+    box_annotator = sv.BoxAnnotator(thickness=2)
+    label_annotator = sv.LabelAnnotator(text_scale=0.5, text_thickness=2)
+    
+    annotated_image = image.copy()
+    annotated_image = box_annotator.annotate(scene=annotated_image, detections=detections)
+    
+    # Create labels with class names
+    labels = [f"{class_names[class_id]}" for class_id in detections.class_id]
+    annotated_image = label_annotator.annotate(scene=annotated_image, detections=detections, labels=labels)
+    
+    return annotated_image
+
+# ===========================
+# FUNCTION: RUN DETECTION (NO THRESHOLD PARAMETER)
+# ===========================
+def detect_objects(image):
     """Run YOLO detection on uploaded image"""
     
     # Convert PIL to numpy array (BGR for OpenCV)
     image_np = np.array(image)
     image_bgr = cv2.cvtColor(image_np, cv2.COLOR_RGB2BGR)
     
-    # Run YOLO inference
-    results = model(image_bgr, conf=confidence_threshold, verbose=False)[0]
+    # Run YOLO inference (using default confidence threshold from model)
+    results = model(image_bgr, verbose=False)[0]
     
     # Convert to supervision format
     detections = sv.Detections.from_ultralytics(results).with_nms()
@@ -79,8 +101,8 @@ def detect_objects(image, confidence_threshold=0.5):
     class_names = model.names
     counts = count_safety_equipment(detections, class_names)
     
-    # Annotate image
-    annotated_image = annotate_image_with_summary(image_bgr, detections, counts)
+    # Annotate image (no summary overlay)
+    annotated_image = annotate_image(image_bgr, detections)
     
     # Convert back to RGB for display
     annotated_image_rgb = cv2.cvtColor(annotated_image, cv2.COLOR_BGR2RGB)
@@ -88,10 +110,9 @@ def detect_objects(image, confidence_threshold=0.5):
     return annotated_image_rgb, detections, counts
 
 # ===========================
-# SIDEBAR: SETTINGS
+# SIDEBAR: MODEL INFO (NO THRESHOLD SLIDER)
 # ===========================
-st.sidebar.markdown("---")
-st.sidebar.markdown("### 📊 Model Info")
+st.sidebar.header("📊 Model Info")
 st.sidebar.info(
     f"""
     **Model:** YOLOv12
@@ -132,7 +153,7 @@ if uploaded_file is not None:
     
     # Run detection
     with st.spinner('🔍 Detecting objects...'):
-        annotated_image, detections, counts = detect_objects(image, confidence_threshold)
+        annotated_image, detections, counts = detect_objects(image)
     
     with col2:
         st.subheader("🎯 Detection Results")
@@ -208,7 +229,6 @@ if uploaded_file is not None:
         if len(detections) > 0:
             detection_data = []
             
-            # FIXED: Correct way to iterate through supervision Detections
             for i in range(len(detections)):
                 bbox = detections.xyxy[i]
                 confidence = detections.confidence[i]
@@ -237,7 +257,6 @@ else:
     2. Select a construction site image (JPG, JPEG, or PNG)
     3. Wait for YOLO to process (~1-2 seconds)
     4. View detected objects and safety compliance metrics
-    5. Adjust confidence threshold in sidebar if needed
     """)
     
     st.markdown("### ✨ Features:")
@@ -252,8 +271,8 @@ else:
         st.write("Automatic compliance calculation")
     
     with col_c:
-        st.markdown("**🔧 Adjustable Settings**")
-        st.write("Control detection sensitivity")
+        st.markdown("**🔧 Simple Interface**")
+        st.write("Easy to use, no configuration needed")
 
 # Footer
 st.markdown("---")
@@ -264,6 +283,5 @@ st.markdown(
     </div>
     """,
     unsafe_allow_html=True
-
 )
 
